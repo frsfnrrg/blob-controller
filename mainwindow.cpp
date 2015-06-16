@@ -35,6 +35,11 @@ void sendKey(Window wId, KeySym key) {
     event.keycode = XKeysymToKeycode(display, key);
     qDebug("Sym %lu creates code %u", key, event.keycode);
 
+    if (!XSetInputFocus(display, wId, RevertToNone, CurrentTime)) {
+        qWarning("sendkey focus failed");
+        goto cleanup;
+    }
+
     if (!XSendEvent(display, wId, True, KeyPressMask, (XEvent *)&event)) {
         qWarning("sendkey send down failed");
         goto cleanup;
@@ -57,6 +62,11 @@ void sendVirtualPointerPosition(Window wId, int x, int y) {
     event.x = x;
     event.y = y;
 
+    if (!XSetInputFocus(display, wId, RevertToNone, CurrentTime)) {
+        qWarning("sendkey focus failed");
+        goto cleanup;
+    }
+
     if (!XSendEvent(display, wId, True, PointerMotionMask, (XEvent *)&event)) {
         qWarning("sendVirtualPointerPosition send failed");
         goto cleanup;
@@ -72,6 +82,11 @@ void sendClick(Window wId, int x, int y) {
     XKeyEvent event = createTemplateEvent(wId, ButtonPress);
     event.x = x;
     event.y = y;
+
+    if (!XSetInputFocus(display, wId, RevertToNone, CurrentTime)) {
+        qWarning("sendkey focus failed");
+        goto cleanup;
+    }
 
     if (!XSendEvent(display, wId, True, ButtonPressMask, (XEvent *)&event)) {
         qWarning("sendClick down failed");

@@ -1,11 +1,7 @@
 #pragma once
 
 #include <QtCore>
-#include <QPixmap>
-#include <QGraphicsView>
-#include <QDialog>
-#include <QPen>
-#include <QBrush>
+#include <QtGui>
 
 typedef struct Command_struct {
     QPoint mouse;
@@ -42,6 +38,8 @@ public:
     Command next(const QPixmap &screen) override;
 };
 
+class SimpleBlobDetectorParameterWindow;
+
 class BlobChaser : public AIFace {
 public:
     BlobChaser();
@@ -52,6 +50,7 @@ private:
     QGraphicsScene* scene;
     QPen pen;
     QBrush brush;
+    SimpleBlobDetectorParameterWindow* params;
 };
 
 // after that, start w/ opencv.

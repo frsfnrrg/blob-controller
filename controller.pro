@@ -15,9 +15,13 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+    xcontrol.cpp \
+    ai.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    xcontrol.h \
+    ai.h
 
 FORMS    += mainwindow.ui
 

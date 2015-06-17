@@ -6,53 +6,48 @@
 #include <QX11EmbedContainer>
 #include <QTimer>
 #include <QTime>
+#include "ai.h"
 
 namespace Ui {
 class MainWindow;
 }
 
-
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
-public:
+  public:
     explicit MainWindow(qint64 wId, QWidget *parent = 0);
     ~MainWindow();
 
-public slots:
+  public slots:
     void start();
     void stop();
-
     void ready();
     void embed();
     void handleError(QX11EmbedContainer::Error);
     void closed();
-
     void sendW();
     void sendSpace();
     void sendReload();
-
     void takeSnapshot();
-
     void updateFrequency();
-
     void updateAutoResume();
-
     void pingStartButton();
+    void autoChanged();
 
-private:
+  private:
     virtual void showEvent(QShowEvent *evt);
 
     void updateStatus(const QString &s);
 
     Ui::MainWindow *ui;
-    QX11EmbedContainer* container;
+    QX11EmbedContainer *container;
 
     qint64 wId;
     QTimer snapshots;
     QTime startTime;
     QTimer resumer;
+    AIFace *currentAI;
 };
 
 #endif // MAINWINDOW_H

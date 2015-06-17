@@ -1,139 +1,17 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QtGui>
-
-#include <X11/X.h> // defn. of Window
-
-#include <X11/keysym.h> // list of keysyms
-
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-
-static Display *display = nullptr;
-
-XKeyEvent createTemplateEvent(Window wId, int type) {
-    XKeyEvent event;
-    event.display = display;
-    event.window = wId;
-    event.root = XDefaultRootWindow(display);
-    event.same_screen = True;
-    event.keycode = 1;
-    event.state = 0;
-    event.x = 1;
-    event.y = 1;
-    event.x_root = 1;
-    event.y_root = 1;
-    event.time = CurrentTime;
-    event.type = type;
-    return event;
-}
-
-void sendKey(Window wId, KeySym key) {
-    display = XOpenDisplay(0);
-
-    XKeyEvent event = createTemplateEvent(wId, KeyPress);
-    event.keycode = XKeysymToKeycode(display, key);
-    qDebug("Sym %lu creates code %u", key, event.keycode);
-
-    if (!XSetInputFocus(display, wId, RevertToNone, CurrentTime)) {
-        qWarning("sendkey focus failed");
-        goto cleanup;
-    }
-
-    if (!XSendEvent(display, wId, True, KeyPressMask, (XEvent *)&event)) {
-        qWarning("sendkey send down failed");
-        goto cleanup;
-    }
-
-    event.time = CurrentTime;
-    event.type = KeyRelease;
-    if (!XSendEvent(display, wId, True, KeyPressMask, (XEvent *)&event)) {
-        qWarning("sendkey send up failed");
-        goto cleanup;
-    }
-cleanup:
-    XCloseDisplay(display);
-}
-
-void sendVirtualPointerPosition(Window wId, int x, int y) {
-    display = XOpenDisplay(0);
-
-    XKeyEvent event = createTemplateEvent(wId, MotionNotify);
-    event.x = x;
-    event.y = y;
-
-    if (!XSetInputFocus(display, wId, RevertToNone, CurrentTime)) {
-        qWarning("sendkey focus failed");
-        goto cleanup;
-    }
-
-    if (!XSendEvent(display, wId, True, PointerMotionMask, (XEvent *)&event)) {
-        qWarning("sendVirtualPointerPosition send failed");
-        goto cleanup;
-    }
-
-cleanup:
-    XCloseDisplay(display);
-}
-
-void sendClick(Window wId, int x, int y) {
-    display = XOpenDisplay(0);
-
-    XKeyEvent event = createTemplateEvent(wId, ButtonPress);
-    event.x = x;
-    event.y = y;
-
-    if (!XSetInputFocus(display, wId, RevertToNone, CurrentTime)) {
-        qWarning("sendkey focus failed");
-        goto cleanup;
-    }
-
-    if (!XSendEvent(display, wId, True, ButtonPressMask, (XEvent *)&event)) {
-        qWarning("sendClick down failed");
-        goto cleanup;
-    }
-
-    event.time = CurrentTime;
-    event.type = ButtonRelease;
-    if (!XSendEvent(display, wId, True, ButtonPressMask, (XEvent *)&event)) {
-        qWarning("sendClick up failed");
-        goto cleanup;
-    }
-cleanup:
-    XCloseDisplay(display);
-}
-
-QSize getWindowSize(Window wId) {
-    QSize s;
-
-    display = XOpenDisplay(0);
-    XWindowAttributes e;
-
-    if (!XGetWindowAttributes(display, wId, &e)) {
-        qWarning("windowsize attributes failed");
-        goto cleanup;
-    }
-
-    s.setWidth(e.width);
-    s.setHeight(e.height);
-
-cleanup:
-    XCloseDisplay(display);
-
-    return s;
-}
+#include <xcontrol.h>
 
 MainWindow::MainWindow(qint64 wId, QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
     this->wId = wId;
 
-    //    if (display == nullptr) {
-    //        qFatal("couldn't open display");
-    //    }
-
     ui->setupUi(this);
 
     this->setAttribute(Qt::WA_DeleteOnClose);
+
+    currentAI = nullptr;
 
     container = new QX11EmbedContainer();
     container->setMinimumSize(QSize(50, 50));
@@ -159,21 +37,27 @@ MainWindow::MainWindow(qint64 wId, QWidget *parent)
     connect(ui->boxAutoresume, SIGNAL(stateChanged(int)),
             SLOT(updateAutoResume()));
 
+    ui->comboAutoChoice->addItem("Rotary");
+    ui->comboAutoChoice->addItem("Lightseeker");
+    ui->comboAutoChoice->addItem("Ringrunner");
+    connect(ui->comboAutoChoice, SIGNAL(activated(int)), SLOT(autoChanged()));
+
     QTimer::singleShot(50, this, SLOT(embed()));
 
-    updateFrequency();
     snapshots.setSingleShot(false);
     connect(&snapshots, SIGNAL(timeout()), SLOT(takeSnapshot()));
 
     resumer.setInterval(2500);
     resumer.setSingleShot(false);
     connect(&resumer, SIGNAL(timeout()), SLOT(pingStartButton()));
+
+    updateFrequency();
+    autoChanged();
 }
 
 MainWindow::~MainWindow() {
-    XCloseDisplay(display);
-    delete ui;
     QApplication::quit();
+    // delete ui;
 }
 
 void MainWindow::showEvent(QShowEvent *evt) {
@@ -196,22 +80,30 @@ void MainWindow::ready() {
     updateStatus("Client is embedded (wId: " + QString::number(wId) + ")");
     startTime = QTime::currentTime();
     snapshots.start();
+    if (ui->boxAutoresume->isChecked()) {
+        resumer.start();
+    }
 }
 
 void MainWindow::closed() {
     updateStatus("Client was closed");
     snapshots.stop();
     startTime = QTime();
+    if (resumer.isActive()) {
+        resumer.stop();
+    }
 }
 
 void MainWindow::updateFrequency() {
     snapshots.setInterval(1000.0 / ui->spinFrequency->value());
 }
 void MainWindow::updateAutoResume() {
-    if (ui->boxAutoresume->checkState() == Qt::Checked) {
-        resumer.start();
-    } else {
-        resumer.stop();
+    if (snapshots.isActive()) {
+        if (ui->boxAutoresume->isChecked()) {
+            resumer.start();
+        } else {
+            resumer.stop();
+        }
     }
 }
 
@@ -265,6 +157,19 @@ void MainWindow::sendReload() {
     updateStatus("Send 'F5'");
 }
 
+void MainWindow::autoChanged() {
+    if (currentAI != nullptr) {
+        delete currentAI;
+    }
+    if (ui->comboAutoChoice->currentIndex() == 0) {
+        currentAI = new RotaryControl();
+    } else if (ui->comboAutoChoice->currentIndex() == 1) {
+        currentAI = new LightSeeker();
+    } else {
+        currentAI = new RingRunner();
+    }
+}
+
 void MainWindow::takeSnapshot() {
     QTime t = QTime::currentTime();
 
@@ -278,16 +183,14 @@ void MainWindow::takeSnapshot() {
         image.save(&file, "PNG");
     }
 
-    // annoying pointer control
-    if (ui->boxAutomouse->checkState() == Qt::Checked) {
-        double elapsed = t.msecsTo(startTime) / 1000.0;
-        double scale = elapsed * 3;
-        double w = image.width();
-        double h = image.height();
-        int r = h > w ? w / 3 : h / 3;
-        int y = h / 2 - sin(scale) * r;
-        int x = w / 2 - cos(scale) * r;
-        qDebug("%d %d", x, y);
-        sendVirtualPointerPosition(wId, x, y);
+    if (ui->boxAutomouse->isChecked()) {
+        Command action = currentAI->next(image);
+        sendVirtualPointerPosition(wId, action.mouse.x(), action.mouse.y());
+        if (action.W) {
+            sendKey(wId, XK_w);
+        }
+        if (action.space) {
+            sendKey(wId, XK_space);
+        }
     }
 }

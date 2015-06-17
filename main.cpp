@@ -84,9 +84,9 @@ int main(int argc, char *argv[]) {
     // (ignore such lines)
 
     qint64 wId = 0;
-    int retries = 3;
+    int retries = 20;
     while (wId == 0 && retries > 0) {
-        sleep(2);
+        usleep(1000000);
         wId = getWindowForPid(pid);
         retries--;
     }

@@ -40,7 +40,11 @@ MainWindow::MainWindow(qint64 wId, QWidget *parent)
     ui->comboAutoChoice->addItem("Rotary");
     ui->comboAutoChoice->addItem("Lightseeker");
     ui->comboAutoChoice->addItem("Ringrunner");
+    ui->comboAutoChoice->addItem("Blobchaser");
+
+    ui->comboAutoChoice->setCurrentIndex(3);
     connect(ui->comboAutoChoice, SIGNAL(activated(int)), SLOT(autoChanged()));
+    connect(ui->buttonStart, SIGNAL(clicked(bool)), SLOT(startGame()));
 
     QTimer::singleShot(50, this, SLOT(embed()));
 
@@ -107,14 +111,7 @@ void MainWindow::updateAutoResume() {
     }
 }
 
-void MainWindow::pingStartButton() {
-    QSize s = getWindowSize(wId);
-    int stretch = (s.height() - 650) / 3;
-    int y = stretch * 2 + 150;
-    int x = s.width() / 2;
-    qDebug("ping %d %d -> %d %d", s.width(), s.height(), x, y);
-    sendClick(wId, x, y);
-}
+void MainWindow::pingStartButton() { startGame(); }
 
 void MainWindow::handleError(QX11EmbedContainer::Error e) {
     switch (e) {
@@ -165,9 +162,20 @@ void MainWindow::autoChanged() {
         currentAI = new RotaryControl();
     } else if (ui->comboAutoChoice->currentIndex() == 1) {
         currentAI = new LightSeeker();
-    } else {
+    } else if (ui->comboAutoChoice->currentIndex() == 2) {
         currentAI = new RingRunner();
+    } else {
+        currentAI = new BlobChaser();
     }
+}
+
+void MainWindow::startGame() {
+    QSize s = getWindowSize(wId);
+    int stretch = (s.height() - 650) / 3;
+    int y = stretch * 2 + 150;
+    int x = s.width() / 2;
+    qDebug("ping %d %d -> %d %d", s.width(), s.height(), x, y);
+    sendClick(wId, x, y);
 }
 
 void MainWindow::takeSnapshot() {
@@ -185,12 +193,14 @@ void MainWindow::takeSnapshot() {
 
     if (ui->boxAutomouse->isChecked()) {
         Command action = currentAI->next(image);
-        sendVirtualPointerPosition(wId, action.mouse.x(), action.mouse.y());
-        if (action.W) {
-            sendKey(wId, XK_w);
-        }
-        if (action.space) {
-            sendKey(wId, XK_space);
+        if (ui->switchAuto->value() == 1) {
+            sendVirtualPointerPosition(wId, action.mouse.x(), action.mouse.y());
+            if (action.W) {
+                sendKey(wId, XK_w);
+            }
+            if (action.space) {
+                sendKey(wId, XK_space);
+            }
         }
     }
 }

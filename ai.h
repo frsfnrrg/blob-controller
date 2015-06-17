@@ -2,6 +2,10 @@
 
 #include <QtCore>
 #include <QPixmap>
+#include <QGraphicsView>
+#include <QDialog>
+#include <QPen>
+#include <QBrush>
 
 typedef struct Command_struct {
     QPoint mouse;
@@ -38,9 +42,17 @@ public:
     Command next(const QPixmap &screen) override;
 };
 
-// next step: basic ring-structured avoidance.
-// rank things in the nearby ring highly,
-// and stay away from those.
+class BlobChaser : public AIFace {
+public:
+    BlobChaser();
+    virtual ~BlobChaser();
+    Command next(const QPixmap &screen) override;
+private:
+    QDialog* dialog;
+    QGraphicsScene* scene;
+    QPen pen;
+    QBrush brush;
+};
 
 // after that, start w/ opencv.
 // do blob-finding and reduce problem to N-points

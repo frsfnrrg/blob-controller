@@ -55,6 +55,68 @@
        <property name="leftMargin">
         <number>6</number>
        </property>
+       <item row="8" column="0" alignment="Qt::AlignRight">
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>Auto Choice</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QCheckBox" name="boxImageCapture">
+         <property name="text">
+          <string>Image capture</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QSlider" name="switchAuto">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximum">
+          <number>1</number>
+         </property>
+         <property name="pageStep">
+          <number>1</number>
+         </property>
+         <property name="value">
+          <number>0</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="invertedAppearance">
+          <bool>false</bool>
+         </property>
+         <property name="invertedControls">
+          <bool>false</bool>
+         </property>
+         <property name="tickPosition">
+          <enum>QSlider::TicksBothSides</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
+        <widget class="QComboBox" name="comboAutoChoice">
+         <property name="maxCount">
+          <number>2147483644</number>
+         </property>
+         <property name="modelColumn">
+          <number>0</number>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="0" colspan="2">
+        <widget class="QPushButton" name="buttonReload">
+         <property name="text">
+          <string>Reload page</string>
+         </property>
+        </widget>
+       </item>
        <item row="3" column="1">
         <widget class="QCheckBox" name="boxAutoresume">
          <property name="text">
@@ -62,17 +124,10 @@
          </property>
         </widget>
        </item>
-       <item row="7" column="0" colspan="2">
-        <widget class="QPushButton" name="buttonReload">
+       <item row="9" column="0">
+        <widget class="QPushButton" name="buttonSpace">
          <property name="text">
-          <string>Reload page</string>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="1">
-        <widget class="QPushButton" name="buttonW">
-         <property name="text">
-          <string>Eject Mass</string>
+          <string>Divide</string>
          </property>
         </widget>
        </item>
@@ -95,10 +150,10 @@
          </property>
         </widget>
        </item>
-       <item row="6" column="0">
-        <widget class="QPushButton" name="buttonSpace">
+       <item row="9" column="1">
+        <widget class="QPushButton" name="buttonW">
          <property name="text">
-          <string>Divide</string>
+          <string>Eject Mass</string>
          </property>
         </widget>
        </item>
@@ -109,27 +164,24 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="0">
+       <item row="4" column="1">
+        <widget class="QPushButton" name="buttonStart">
+         <property name="text">
+          <string>Start + Config</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
         <widget class="QCheckBox" name="boxAutomouse">
          <property name="text">
-          <string>Automatic</string>
+          <string>AI routine</string>
          </property>
         </widget>
        </item>
-       <item row="3" column="0">
-        <widget class="QCheckBox" name="boxImageCapture">
+       <item row="5" column="0" alignment="Qt::AlignRight">
+        <widget class="QLabel" name="label_3">
          <property name="text">
-          <string>Image capture</string>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QComboBox" name="comboAutoChoice">
-         <property name="maxCount">
-          <number>2147483644</number>
-         </property>
-         <property name="modelColumn">
-          <number>0</number>
+          <string>AI enabled</string>
          </property>
         </widget>
        </item>

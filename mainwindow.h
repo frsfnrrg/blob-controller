@@ -34,6 +34,7 @@ class MainWindow : public QMainWindow {
     void updateAutoResume();
     void pingStartButton();
     void autoChanged();
+    void startGame();
 
   private:
     virtual void showEvent(QShowEvent *evt);

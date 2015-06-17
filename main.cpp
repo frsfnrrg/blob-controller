@@ -68,24 +68,19 @@ int main(int argc, char *argv[]) {
     a.setApplicationName("Controller");
     a.setOrganizationName("Evil Inc.");
 
-    QProcess process;
-    QStringList args;
-    //    args << "--app=https://www.google.com";
     qint64 pid = 0;
     QStringList sets = QString(program).split(" ");
     QString name = sets.at(0);
     sets.removeFirst();
-    process.startDetached(name, sets, QDir::currentPath(), &pid);
-    qDebug("TARGET PID: %lli", pid);
+    QProcess::startDetached(name, sets, QDir::currentPath(), &pid);
 
-    // then
-    // xdotool finds PID from WID
-    // xwininfo -children -root -int yields a list of lines started by ids
-    // (ignore such lines)
+    qDebug("TARGET PID: %lli", pid);
 
     qint64 wId = 0;
     int retries = 20;
     while (wId == 0 && retries > 0) {
+        // problem is, we need to sleep until the window is up -- i.e, poll window
+        // properties as well
         usleep(1000000);
         wId = getWindowForPid(pid);
         retries--;

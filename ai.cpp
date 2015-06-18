@@ -121,186 +121,62 @@ Command RingRunner::next(const QPixmap &screen) {
     return m;
 }
 
-void addToGrid(QGridLayout *g, const QString &s, QWidget *w) {
-    int l = g->rowCount();
-    g->addWidget(new QLabel(s), l, 0);
-    g->addWidget(w, l, 1);
-}
-
-class SimpleBlobDetectorParameterWindow : public QDialog {
-  public:
-    SimpleBlobDetectorParameterWindow(QWidget *p) : QDialog(p) {
-        setWindowTitle("Parameters");
-
-        thresholdStep = new QDoubleSpinBox();
-        thresholdStep->setRange(std::numeric_limits<float>::min(),
-                                std::numeric_limits<float>::max());
-        thresholdStep->setValue(50.0);
-
-        minThreshold = new QDoubleSpinBox();
-        minThreshold->setRange(std::numeric_limits<float>::min(),
-                               std::numeric_limits<float>::max());
-        minThreshold->setValue(0);
-
-        maxThreshold = new QDoubleSpinBox();
-        maxThreshold->setRange(std::numeric_limits<float>::min(),
-                               std::numeric_limits<float>::max());
-        maxThreshold->setValue(256);
-
-        minRepeatability = new QSpinBox();
-        minRepeatability->setRange(0, std::numeric_limits<int>::max());
-        minRepeatability->setValue(2);
-
-        minDistBetweenBlobs = new QDoubleSpinBox();
-        minDistBetweenBlobs->setRange(std::numeric_limits<float>::min(),
-                                      std::numeric_limits<float>::max());
-        minDistBetweenBlobs->setValue(2);
-
-        filterByColor = new QCheckBox();
-
-        blobColor = new QSpinBox();
-        blobColor->setRange(0, std::numeric_limits<int>::max());
-        blobColor->setValue(0);
-
-        filterByArea = new QCheckBox();
-
-        minArea = new QDoubleSpinBox();
-        minArea->setRange(std::numeric_limits<float>::min(),
-                          std::numeric_limits<float>::max());
-        minArea->setValue(15);
-
-        maxArea = new QDoubleSpinBox();
-        maxArea->setRange(std::numeric_limits<float>::min(),
-                          std::numeric_limits<float>::max());
-        maxArea->setValue(std::numeric_limits<float>::max());
-
-        filterByCircularity = new QCheckBox();
-
-        minCircularity = new QDoubleSpinBox();
-        minCircularity->setRange(std::numeric_limits<float>::min(),
-                                 std::numeric_limits<float>::max());
-        minCircularity->setValue(0.8f);
-
-        maxCircularity = new QDoubleSpinBox();
-        maxCircularity->setRange(std::numeric_limits<float>::min(),
-                                 std::numeric_limits<float>::max());
-        maxCircularity->setValue(std::numeric_limits<float>::max());
-
-        filterByInertia = new QCheckBox();
-
-        minInertiaRatio = new QDoubleSpinBox();
-        minInertiaRatio->setRange(std::numeric_limits<float>::min(),
-                                  std::numeric_limits<float>::max());
-        minInertiaRatio->setValue(0.1);
-
-        maxInertiaRatio = new QDoubleSpinBox();
-        maxInertiaRatio->setRange(std::numeric_limits<float>::min(),
-                                  std::numeric_limits<float>::max());
-        maxInertiaRatio->setValue(std::numeric_limits<float>::max());
-
-        filterByConvexity = new QCheckBox();
-
-        minConvexity = new QDoubleSpinBox();
-        minConvexity->setRange(std::numeric_limits<float>::min(),
-                               std::numeric_limits<float>::max());
-        minConvexity->setValue(0.95);
-
-        maxConvexity = new QDoubleSpinBox();
-        maxConvexity->setRange(std::numeric_limits<float>::min(),
-                               std::numeric_limits<float>::max());
-        maxConvexity->setValue(std::numeric_limits<float>::max());
-
-        QGridLayout *lg = new QGridLayout();
-        addToGrid(lg, "thresholdStep", thresholdStep);
-        addToGrid(lg, "minThreshold", minThreshold);
-        addToGrid(lg, "maxThreshold", maxThreshold);
-        addToGrid(lg, "minRepeatability", minRepeatability);
-        addToGrid(lg, "minDistBetweenBlobs", minDistBetweenBlobs);
-        addToGrid(lg, "filterByColor", filterByColor);
-        addToGrid(lg, "blobColor", blobColor);
-        addToGrid(lg, "filterByArea", filterByArea);
-        addToGrid(lg, "minArea", minArea);
-        addToGrid(lg, "maxArea", maxArea);
-        addToGrid(lg, "filterByCircularity", filterByCircularity);
-        addToGrid(lg, "minCircularity", minCircularity);
-        addToGrid(lg, "maxCircularity", maxCircularity);
-        addToGrid(lg, "filterByInertia", filterByInertia);
-        addToGrid(lg, "minInertiaRatio", minInertiaRatio);
-        addToGrid(lg, "maxInertiaRatio", maxInertiaRatio);
-        addToGrid(lg, "filterByConvexity", filterByConvexity);
-        addToGrid(lg, "minConvexity", minConvexity);
-        addToGrid(lg, "maxConvexity", maxConvexity);
-        this->setLayout(lg);
-    }
-
-    cv::SimpleBlobDetector::Params getParams() {
-        cv::SimpleBlobDetector::Params params;
-        params.thresholdStep = thresholdStep->value();
-        params.minThreshold = minThreshold->value();
-        params.maxThreshold = maxThreshold->value();
-        params.minRepeatability = minRepeatability->value();
-        params.minDistBetweenBlobs = minDistBetweenBlobs->value();
-        params.filterByColor = filterByColor->isChecked();
-        params.blobColor = blobColor->value();
-        params.filterByArea = filterByArea->isChecked();
-        params.minArea = minArea->value();
-        params.maxArea = maxArea->value();
-        params.filterByCircularity = filterByCircularity->isChecked();
-        params.minCircularity = minCircularity->value();
-        params.maxCircularity = maxCircularity->value();
-        params.filterByInertia = filterByInertia->isChecked();
-        params.minInertiaRatio = minInertiaRatio->value();
-        params.maxInertiaRatio = maxInertiaRatio->value();
-        params.filterByConvexity = filterByConvexity->isChecked();
-        params.minConvexity = minConvexity->value();
-        params.maxConvexity = maxConvexity->value();
-        return params;
-    }
-
-  private:
-    QDoubleSpinBox *thresholdStep;
-    QDoubleSpinBox *minThreshold;
-    QDoubleSpinBox *maxThreshold;
-    QSpinBox *minRepeatability;
-    QDoubleSpinBox *minDistBetweenBlobs;
-    QCheckBox *filterByColor;
-    QSpinBox *blobColor;
-    QCheckBox *filterByArea;
-    QDoubleSpinBox *minArea;
-    QDoubleSpinBox *maxArea;
-    QCheckBox *filterByCircularity;
-    QDoubleSpinBox *minCircularity;
-    QDoubleSpinBox *maxCircularity;
-    QCheckBox *filterByInertia;
-    QDoubleSpinBox *minInertiaRatio;
-    QDoubleSpinBox *maxInertiaRatio;
-    QCheckBox *filterByConvexity;
-    QDoubleSpinBox *minConvexity;
-    QDoubleSpinBox *maxConvexity;
-};
-
 BlobChaser::BlobChaser() {
     dialog = new QDialog();
     scene = new QGraphicsScene(dialog);
     scene->setSceneRect(0, 0, 50, 50);
     QBrush bgbrush(Qt::white);
     scene->setBackgroundBrush(bgbrush);
-    QGraphicsView *widget = new QGraphicsView(scene, dialog);
+    widget = new QGraphicsView(scene, dialog);
+    widget->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    widget->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    widget->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     QHBoxLayout *layout = new QHBoxLayout();
-    layout->addWidget(widget);
+    layout->addStretch(1);
+    layout->addWidget(widget, 0);
+    layout->addStretch(1);
     dialog->setLayout(layout);
     dialog->setWindowTitle("Mirror");
+    dialog->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 
     pen.setColor(Qt::red);
     brush.setColor(Qt::red);
 
-    params = new SimpleBlobDetectorParameterWindow(dialog);
-    params->show();
     dialog->show();
+
+    myRadius = 0.1;
 }
 
 BlobChaser::~BlobChaser() { delete dialog; }
+
+double attractivenessCurve(double x) {
+    // X is logarithmic
+    // fear proportional to size
+    // problem is the pixel curve - ought to divide by screen max dim proportion
+    const double curve[][2] = {
+        {-5, 0},   // 0.00625x
+        {-2, 1}, // 0.25x
+        {-1, 2}, // 0.5x
+        {0, -0.15},
+        {1, -20},  // 2x
+        {2, -15}, // 5x
+        {5, -1}    // 32x
+    };
+    int len = sizeof(curve) / sizeof(curve[0]);
+    if (x < curve[0][0]) {
+        return curve[0][1];
+    }
+    for (int i = 0; i < len - 1; i++) {
+        if (x > curve[i + 1][0]) {
+            continue;
+        }
+        return (x - curve[i][0]) * (curve[i + 1][1] - curve[i][1]) /
+                   (curve[i + 1][0] - curve[i][0]) +
+               curve[i][1];
+    }
+    return curve[len - 1][1];
+}
 
 float dist(cv::Point2f a, cv::Point2f b) {
     float xd = a.x - b.x;
@@ -308,73 +184,152 @@ float dist(cv::Point2f a, cv::Point2f b) {
     return sqrt(xd * xd + yd * yd);
 }
 
+qreal dist(QPointF a, QPointF b) {
+    qreal xd = a.x() - b.x();
+    qreal yd = a.y() - b.y();
+    return qSqrt(xd * xd + yd * yd);
+}
+
 Command BlobChaser::next(const QPixmap &screen) {
-    QImage swapped = screen.toImage();
-    swapped.invertPixels();
-    cv::Mat original(swapped.height(), swapped.width(), CV_8UC3,
-                     const_cast<uchar *>(swapped.bits()),
-                     swapped.bytesPerLine());
-    cv::Mat mat = original;
-//    cvtColor(original, mat, CV_RGB2GRAY);
-
-    // might want to skip opencv and do zone control -- e.g, iterate through
-    // image, pick undefined pixel, flood fill, repeat. problem is finding a
-    // free
-    // pixel -- would need voxel-ish tree (divide into N << cells) and a counter
-    // per cell
-
     // requires:
     // a) Dark color scheme
     // b) No names
     // c) No sizes
     // d) No images
     // e) No colors
+    QImage swapped = screen.toImage();
+    swapped.invertPixels();
+    cv::Mat original(swapped.height(), swapped.width(), CV_8UC4,
+                     const_cast<uchar *>(swapped.bits()),
+                     swapped.bytesPerLine());
 
     scene->setSceneRect(0, 0, swapped.width(), swapped.height());
+    widget->setMinimumSize(QSize(swapped.width() + 2, swapped.height() + 2));
+    widget->fitInView(scene->sceneRect());
     scene->clear();
 
-    qDebug("%d %d", mat.rows, mat.cols);
+    // probably should insert intermediate step to filter out the score
 
-    cv::SimpleBlobDetector detector(params->getParams());
-    std::vector<cv::KeyPoint> keypoints;
-    detector.detect(mat, keypoints);
+    cv::Mat cleared(original.rows, original.cols, original.type());
+    cv::threshold(original, cleared, 25, 256, cv::THRESH_BINARY_INV);
 
-    // identify the most central blob. remove from list, define as Me.
-    if (keypoints.empty()) {
-        return {QPoint(mat.cols / 2, mat.rows / 2), false, false};
-    }
+    cv::Mat simple(original.rows, original.cols, CV_8UC1);
+    cvtColor(cleared, simple, CV_RGBA2GRAY);
 
-    std::vector<cv::KeyPoint> regrow;
-    cv::KeyPoint me = keypoints[0];
-
-    cv::Point2f center(mat.cols / 2, mat.rows / 2);
-
-    QImage image(original.data, mat.cols, mat.rows, QImage::Format_ARGB32);
-    //    for (int i=0;i<255;i++) {
-    //        image.setColor(i, qRgb(i,i,i));
-    //    }
+    cv::Mat display = simple.clone();
+    QImage image(display.data, display.cols, display.rows, display.step,
+                 QImage::Format_Indexed8);
+    image.invertPixels();
     scene->addPixmap(QPixmap::fromImage(image));
 
-    float minDist = mat.rows + mat.cols;
-    for (size_t i = 1; i < keypoints.size(); i++) {
-        cv::KeyPoint pt = keypoints[i];
+    std::vector<std::vector<cv::Point>> contours;
+    cv::findContours(simple, contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
 
-        float r = dist(pt.pt, center);
+    // inverting modifies source as well -- hence after findContours
+
+    typedef struct Blob_struct {
+        cv::Point2f center;
+        double area;
+        float radius;
+        double circumference;
+    } Blob;
+
+    std::vector<Blob> blobs(contours.size());
+    for (std::vector<cv::Point> contour : contours) {
+        Blob blob;
+        blob.area = cv::contourArea(contour);
+        cv::minEnclosingCircle(contour, blob.center, blob.radius);
+        blob.circumference = cv::arcLength(contour, false);
+        blobs.push_back(blob);
+    }
+
+    int w = simple.cols, h = simple.rows;
+
+    if (blobs.size() == 0) {
+        // command: sit!
+        return {QPoint(w / 2, h / 2), false, false};
+    }
+
+    std::vector<Blob> allBlobsButMe;
+    Blob me = blobs[0];
+
+    cv::Point2f center(w / 2, h / 2);
+
+    float minDist = w + h;
+    for (size_t i = 1; i < blobs.size(); i++) {
+        Blob pt = blobs[i];
+
+        float r = dist(pt.center, center);
         if (r < minDist) {
-            regrow.push_back(me);
+            allBlobsButMe.push_back(me);
             me = pt;
+            minDist = r;
         } else {
-            regrow.push_back(pt);
+            allBlobsButMe.push_back(pt);
         }
 
-        //        qDebug("x %f y %f angle %f size %f response %f", point.pt.x,
-        //        point.pt.y,
-        //               point.angle, point.size, point.response);
-
-        scene->addEllipse(pt.pt.x - pt.size / 2, pt.pt.y - pt.size / 2, pt.size,
-                          pt.size, pen, brush);
-        scene->addRect(0, 0, mat.cols / 2, mat.rows / 2, pen, brush);
+        float d1 = pt.radius * 2;
+        scene->addEllipse(pt.center.x - d1 / 2, pt.center.y - d1 / 2, d1, d1,
+                          QPen(Qt::green));
+        float d2 = sqrt(pt.area / M_PI) * 2;
+        scene->addEllipse(pt.center.x - d2 / 2, pt.center.y - d2 / 2, d2, d2,
+                          QPen(Qt::blue));
+        float d3 = pt.circumference / M_PI;
+        scene->addEllipse(pt.center.x - d3 / 2, pt.center.y - d3 / 2, d3, d3,
+                          QPen(Qt::red));
     }
-    qDebug("ME x %f y %f angle %f size %f response %f %f %f", me.pt.x, me.pt.y,
-           me.angle, me.size, me.response, mat.cols / 2.0, mat.rows / 2.0);
+    // The best area estimator is the one derived from the radius (of bounding
+    // circle)
+
+    // C/r/pi > 2.15 indicates jagged edges. 2 is typical for a blob. less
+    // indicates chunks remove
+    if (me.radius > 0.0 && me.circumference / me.radius < 2.15 * M_PI) {
+        // not hiding under a spiky ball
+        myRadius = me.radius;
+    }
+
+//    qDebug("ME x %f y %f area %f rad %f center %f %f real %s my %f",
+//           me.center.x, me.center.y, me.area, (double)me.radius, w / 2.0,
+//           h / 2.0,
+//           (me.circumference / me.radius > 2.15 * M_PI ? "nope" : "yep"),
+//           myRadius);
+
+    QPointF qcenter(w / 2, h / 2);
+
+    QPointF vector(0, 0);
+    for (Blob blob : allBlobsButMe) {
+        if (blob.radius == 0.0 ||
+            blob.circumference / blob.radius > 2.15 * M_PI) {
+            // degenerate or spiky
+            continue;
+        }
+
+        QPointF bc(blob.center.x, blob.center.y);
+        // log base E
+        double logratio = log2(blob.radius / me.radius);
+        double scale = attractivenessCurve(logratio);
+        double sep = dist(bc, qcenter);
+        //        qDebug("%f -> %f %f | %f %f", logratio, scale, dist(bc,
+        //        qcenter),
+        //               bc.x() - qcenter.x(), bc.y() - qcenter.y());
+        QPointF shift = (bc - qcenter) * scale / (sep * sep) * 1.1;
+        vector += shift;
+
+        QPen pen;
+        if (scale < 0) {
+            pen.setColor(Qt::red);
+        } else {
+            pen.setColor(Qt::green);
+        }
+
+        scene->addLine(bc.x(), bc.y(), bc.x() + shift.x() * 1000,
+                       bc.y() + shift.y() * 1000, pen);
+    }
+
+    double x = vector.x();
+    double y = vector.y();
+    double mag = sqrt(x * x + y * y);
+    double r = min(w, h) / 2;
+    QPointF final = QPointF(w / 2, h / 2) + vector / mag * r;
+    return {final.toPoint(), false, false};
 }

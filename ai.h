@@ -10,51 +10,56 @@ typedef struct Command_struct {
 } Command;
 
 class AIFace {
-public:
-    virtual ~AIFace(){}
+  public:
+    virtual ~AIFace() {}
     virtual void start() {}
     virtual void stop() {}
     virtual Command next(const QPixmap &screen) = 0;
 };
 
 class RotaryControl : public AIFace {
-public:
+  public:
     RotaryControl();
     void start() override;
     Command next(const QPixmap &screen) override;
-private:
+
+  private:
     QTime startTime;
 };
 
 class LightSeeker : public AIFace {
-public:
+  public:
     LightSeeker();
     Command next(const QPixmap &screen) override;
 };
 
 class RingRunner : public AIFace {
-public:
+  public:
     RingRunner();
     Command next(const QPixmap &screen) override;
 };
 
-class SimpleBlobDetectorParameterWindow;
-
 class BlobChaser : public AIFace {
-public:
+  public:
     BlobChaser();
     virtual ~BlobChaser();
     Command next(const QPixmap &screen) override;
-private:
-    QDialog* dialog;
-    QGraphicsScene* scene;
+
+  private:
+    QDialog *dialog;
+    QGraphicsScene *scene;
+    QGraphicsView *widget;
     QPen pen;
     QBrush brush;
-    SimpleBlobDetectorParameterWindow* params;
+
+    double myRadius;
 };
 
-// after that, start w/ opencv.
-// do blob-finding and reduce problem to N-points
-// of areas->radii, average colors, and centroids
-// then move as needed
+double attractivenessCurve(double x);
 
+// next up: modified form of Blobchaser, with
+// jagged edge detection (to avoid escaping spikes when it's)
+// not needed. Then grid identification (periodic X/Y lines, self code),
+// and it's easy. X-render offscreen; play nicer with the mouse (focus blink is
+// bad). Make window sizes nicer, force optimal aspect ratio
+// also, autoconfig with proper blue button seek, name entry

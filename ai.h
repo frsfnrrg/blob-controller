@@ -14,14 +14,14 @@ class AIFace {
     virtual ~AIFace() {}
     virtual void start() {}
     virtual void stop() {}
-    virtual Command next(const QPixmap &screen) = 0;
+    virtual Command next(const QImage &screen) = 0;
 };
 
 class RotaryControl : public AIFace {
   public:
     RotaryControl();
     void start() override;
-    Command next(const QPixmap &screen) override;
+    Command next(const QImage &screen) override;
 
   private:
     QTime startTime;
@@ -30,20 +30,20 @@ class RotaryControl : public AIFace {
 class LightSeeker : public AIFace {
   public:
     LightSeeker();
-    Command next(const QPixmap &screen) override;
+    Command next(const QImage &screen) override;
 };
 
 class RingRunner : public AIFace {
   public:
     RingRunner();
-    Command next(const QPixmap &screen) override;
+    Command next(const QImage &screen) override;
 };
 
 class BlobChaser : public AIFace {
   public:
     BlobChaser();
     virtual ~BlobChaser();
-    Command next(const QPixmap &screen) override;
+    Command next(const QImage &screen) override;
 
   private:
     QDialog *dialog;

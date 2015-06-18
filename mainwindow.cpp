@@ -181,7 +181,13 @@ void MainWindow::startGame() {
 void MainWindow::takeSnapshot() {
     QTime t = QTime::currentTime();
 
-    QPixmap image = QPixmap::grabWindow(wId);
+//    QPixmap image = QPixmap::grabWindow(wId);
+
+    QImage image = grabWindowScreenshot(wId);
+    if (image.isNull()) {
+        return;
+    }
+
     QString name = QDir::homePath() + "/tmp/seq/target" + t.toString() + "-" +
                    QString::number(t.msec()) + ".png";
     if (ui->boxImageCapture->checkState() == Qt::Checked) {

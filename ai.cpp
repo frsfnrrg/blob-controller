@@ -8,7 +8,7 @@ RotaryControl::RotaryControl() {}
 
 void RotaryControl::start() { startTime = QTime::currentTime(); }
 
-Command RotaryControl::next(const QPixmap &screen) {
+Command RotaryControl::next(const QImage &screen) {
     double elapsed = QTime::currentTime().msecsTo(startTime) / 1000.0;
     double scale = elapsed * 3;
     double w = screen.width();
@@ -25,9 +25,8 @@ Command RotaryControl::next(const QPixmap &screen) {
 
 LightSeeker::LightSeeker() {}
 
-Command LightSeeker::next(const QPixmap &screen) {
+Command LightSeeker::next(const QImage &image) {
     // put mouse at weighted average of R+G+B
-    QImage image = screen.toImage();
     qint64 x = 0;
     qint64 y = 0;
     Command m;
@@ -69,9 +68,7 @@ Command LightSeeker::next(const QPixmap &screen) {
 }
 
 RingRunner::RingRunner() {}
-Command RingRunner::next(const QPixmap &screen) {
-    QImage image = screen.toImage();
-
+Command RingRunner::next(const QImage &image) {
     QMap<int, QPair<QPointF, int>> points;
 
     int w = image.width();
@@ -155,13 +152,13 @@ double attractivenessCurve(double x) {
     // fear proportional to size
     // problem is the pixel curve - ought to divide by screen max dim proportion
     const double curve[][2] = {
-        {-5, 0},   // 0.00625x
+        {-5, 0}, // 0.00625x
         {-2, 1}, // 0.25x
         {-1, 2}, // 0.5x
         {0, -0.15},
-        {1, -20},  // 2x
+        {1, -20}, // 2x
         {2, -15}, // 5x
-        {5, -1}    // 32x
+        {5, -1}   // 32x
     };
     int len = sizeof(curve) / sizeof(curve[0]);
     if (x < curve[0][0]) {
@@ -190,28 +187,25 @@ qreal dist(QPointF a, QPointF b) {
     return qSqrt(xd * xd + yd * yd);
 }
 
-Command BlobChaser::next(const QPixmap &screen) {
+Command BlobChaser::next(const QImage &screen) {
     // requires:
     // a) Dark color scheme
     // b) No names
     // c) No sizes
     // d) No images
     // e) No colors
-    QImage swapped = screen.toImage();
-    swapped.invertPixels();
-    cv::Mat original(swapped.height(), swapped.width(), CV_8UC4,
-                     const_cast<uchar *>(swapped.bits()),
-                     swapped.bytesPerLine());
+    cv::Mat original(screen.height(), screen.width(), CV_8UC4,
+                     const_cast<uchar *>(screen.bits()), screen.bytesPerLine());
 
-    scene->setSceneRect(0, 0, swapped.width(), swapped.height());
-    widget->setMinimumSize(QSize(swapped.width() + 2, swapped.height() + 2));
+    scene->setSceneRect(0, 0, screen.width(), screen.height());
+    widget->setMinimumSize(QSize(screen.width() + 2, screen.height() + 2));
     widget->fitInView(scene->sceneRect());
     scene->clear();
 
     // probably should insert intermediate step to filter out the score
 
     cv::Mat cleared(original.rows, original.cols, original.type());
-    cv::threshold(original, cleared, 25, 256, cv::THRESH_BINARY_INV);
+    cv::threshold(original, cleared, 256 - 25, 256, cv::THRESH_BINARY);
 
     cv::Mat simple(original.rows, original.cols, CV_8UC1);
     cvtColor(cleared, simple, CV_RGBA2GRAY);
@@ -224,8 +218,6 @@ Command BlobChaser::next(const QPixmap &screen) {
 
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(simple, contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
-
-    // inverting modifies source as well -- hence after findContours
 
     typedef struct Blob_struct {
         cv::Point2f center;
@@ -260,7 +252,13 @@ Command BlobChaser::next(const QPixmap &screen) {
         Blob pt = blobs[i];
 
         float r = dist(pt.center, center);
-        if (r < minDist) {
+        // need a second condition: containment... (a larger blob containing a
+        // smaller blob)
+        float s = dist(pt.center, me.center);
+
+        // closer & not engulfed or further and engulfing
+        if ((r < minDist && (s + me.radius > pt.radius)) ||
+            (s + me.radius < pt.radius)) {
             allBlobsButMe.push_back(me);
             me = pt;
             minDist = r;
@@ -288,13 +286,14 @@ Command BlobChaser::next(const QPixmap &screen) {
         myRadius = me.radius;
     }
 
-//    qDebug("ME x %f y %f area %f rad %f center %f %f real %s my %f",
-//           me.center.x, me.center.y, me.area, (double)me.radius, w / 2.0,
-//           h / 2.0,
-//           (me.circumference / me.radius > 2.15 * M_PI ? "nope" : "yep"),
-//           myRadius);
+    //    qDebug("ME x %f y %f area %f rad %f center %f %f real %s my %f",
+    //           me.center.x, me.center.y, me.area, (double)me.radius, w / 2.0,
+    //           h / 2.0,
+    //           (me.circumference / me.radius > 2.15 * M_PI ? "nope" : "yep"),
+    //           myRadius);
 
-    QPointF qcenter(w / 2, h / 2);
+    // all motion/attraction relative to the blob, per se
+    QPointF qcenter(me.center.x, me.center.y);
 
     QPointF vector(0, 0);
     for (Blob blob : allBlobsButMe) {
@@ -305,10 +304,17 @@ Command BlobChaser::next(const QPixmap &screen) {
         }
 
         QPointF bc(blob.center.x, blob.center.y);
+        double sep = dist(bc, qcenter);
+        if (sep < myRadius) {
+            qDebug("%f %f", sep, myRadius);
+            // ignore things inside the blob (like text)
+            continue;
+        }
+
         // log base E
         double logratio = log2(blob.radius / me.radius);
         double scale = attractivenessCurve(logratio);
-        double sep = dist(bc, qcenter);
+
         //        qDebug("%f -> %f %f | %f %f", logratio, scale, dist(bc,
         //        qcenter),
         //               bc.x() - qcenter.x(), bc.y() - qcenter.y());

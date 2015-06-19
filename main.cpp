@@ -68,6 +68,9 @@ int main(int argc, char *argv[]) {
     a.setApplicationName("Controller");
     a.setOrganizationName("Evil Inc.");
 
+    // clean up previous chrome processes to prevent a process/window merge
+    QProcess::startDetached("killall chrome");
+
     qint64 pid = 0;
     QStringList sets = QString(program).split(" ");
     QString name = sets.at(0);

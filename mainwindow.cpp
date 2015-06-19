@@ -82,6 +82,9 @@ void MainWindow::stop() { updateStatus("Stop pressed"); }
 
 void MainWindow::ready() {
     updateStatus("Client is embedded (wId: " + QString::number(wId) + ")");
+    container->setMinimumSize(300,500);
+
+
     startTime = QTime::currentTime();
     snapshots.start();
     if (ui->boxAutoresume->isChecked()) {

@@ -128,8 +128,8 @@ cleanup:
 QImage grabWindowScreenshot(Window wId) {
     Pixmap pixmap;
     XRenderPictFormat *format;
-    XRenderPictureAttributes pic_attrs;
-    Picture picture;
+//    XRenderPictureAttributes pic_attrs;
+//    Picture picture;
     XImage *xim;
     QImage image;
 
@@ -159,7 +159,7 @@ QImage grabWindowScreenshot(Window wId) {
         goto cleanup2;
     }
 
-    pic_attrs.subwindow_mode = IncludeInferiors;
+//    pic_attrs.subwindow_mode = IncludeInferiors;
 
     //    picture =
     //        XRenderCreatePicture(display, wId, format, CPSubwindowMode,

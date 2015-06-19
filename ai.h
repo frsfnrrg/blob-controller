@@ -1,7 +1,11 @@
 #pragma once
 
-#include <QtCore>
-#include <QtGui>
+#include <QPoint>
+#include <QTime>
+#include <QPen>
+#include <QBrush>
+
+class QGraphicsScene;
 
 typedef struct Command_struct {
     QPoint mouse;
@@ -39,6 +43,7 @@ class RingRunner : public AIFace {
     Command next(const QImage &screen) override;
 };
 
+class AspectGraphicsView;
 class BlobChaser : public AIFace {
   public:
     BlobChaser();
@@ -48,7 +53,7 @@ class BlobChaser : public AIFace {
   private:
     QDialog *dialog;
     QGraphicsScene *scene;
-    QGraphicsView *widget;
+    AspectGraphicsView *widget;
     QPen pen;
     QBrush brush;
 

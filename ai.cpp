@@ -3,6 +3,7 @@
 #include <QtGui>
 
 inline int min(int a, int b) { return a > b ? b : a; }
+inline int max(int a, int b) { return a < b ? b : a; }
 
 RotaryControl::RotaryControl() {}
 
@@ -118,24 +119,53 @@ Command RingRunner::next(const QImage &image) {
     return m;
 }
 
+class AspectGraphicsView : public QGraphicsView {
+  public:
+    AspectGraphicsView(QGraphicsScene *a, QWidget *b) : QGraphicsView(a, b) {
+        QSizePolicy sizepolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        sizepolicy.setHeightForWidth(true);
+        scale = 0.5;
+        this->setSizePolicy(sizepolicy);
+    }
+
+    void setTargetRatio(int x, int y) {
+        scale = qreal(y) / qreal(x);
+        QSize windowSize = this->window()->size();
+        if (windowSize.width() * scale > windowSize.height()) {
+            this->resize(windowSize.height() / scale, windowSize.height());
+        } else {
+            this->resize(windowSize.width(), windowSize.width() * scale);
+        }
+    }
+
+    int heightForWidth(int wg) const override { return (int)wg * scale; }
+
+  private:
+    qreal scale;
+};
+
 BlobChaser::BlobChaser() {
     dialog = new QDialog();
     scene = new QGraphicsScene(dialog);
     scene->setSceneRect(0, 0, 50, 50);
     QBrush bgbrush(Qt::white);
     scene->setBackgroundBrush(bgbrush);
-    widget = new QGraphicsView(scene, dialog);
+    widget = new AspectGraphicsView(scene, dialog);
     widget->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     widget->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    widget->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
-    QHBoxLayout *layout = new QHBoxLayout();
-    layout->addStretch(1);
-    layout->addWidget(widget, 0);
-    layout->addStretch(1);
-    dialog->setLayout(layout);
+    QGridLayout *gridLayout = new QGridLayout();
+    gridLayout->addWidget(widget, 0, 0, Qt::AlignCenter);
+    gridLayout->setColumnStretch(0, 1);
+    gridLayout->setRowStretch(0, 1);
+
+    // note: XSizeHints can control the aspect ratio
+    // XAllocSizeHints().
+    // XSetWMSizeHints().
+    // PAspect
+    dialog->setLayout(gridLayout);
+    dialog->setMinimumSize(300, 300);
     dialog->setWindowTitle("Mirror");
-    dialog->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 
     pen.setColor(Qt::red);
     brush.setColor(Qt::red);
@@ -156,9 +186,9 @@ double attractivenessCurve(double x) {
         {-2, 1}, // 0.25x
         {-1, 2}, // 0.5x
         {0, -0.15},
-        {1, -20}, // 2x
-        {2, -15}, // 5x
-        {5, -1}   // 32x
+        {1, -10},  // 2x
+        {2, -3},   // 5x
+        {5, -0.25} // 32x
     };
     int len = sizeof(curve) / sizeof(curve[0]);
     if (x < curve[0][0]) {
@@ -196,7 +226,7 @@ double rotationFactor(const std::vector<cv::Point> &pts) {
     // may want to wrap around
     cv::Point prev = pts[1] - pts[0];
     double lastCross = 0;
-    for (int i = 2; i < pts.size(); i++) {
+    for (size_t i = 2; i < pts.size(); i++) {
         cv::Point delta = pts[i] - pts[i - 1];
         double cross = delta.cross(prev);
         if (cross != 0) {
@@ -205,8 +235,42 @@ double rotationFactor(const std::vector<cv::Point> &pts) {
             }
             lastCross = cross;
         }
+
+        // TODO: fix single pixel problems with larger jumps, maybe by radius
+        // prev = delta;
+        // qDebug("xy %d %d | cross %f | rev %d", pts[i].x, pts[i].y, cross,
+        // reversals);
     }
     return (double)reversals;
+}
+
+QPolygonF makeRotatedSquare(qreal x, qreal y, qreal r, qreal theta) {
+    qreal angle = theta+M_PI_4;
+    qreal dy = sin(angle) * r;
+    qreal dx = cos(angle) * r;
+    QPolygonF poly;
+    poly.append(QPointF(x+dx,y+dy));
+    poly.append(QPointF(x-dy,y+dx));
+    poly.append(QPointF(x-dx,y-dy));
+    poly.append(QPointF(x+dy,y-dx));
+    poly.append(poly.at(0));
+    return poly;
+}
+
+typedef struct Blob_struct {
+    cv::Point2f center;
+    double area;
+    float radius;
+    double circumference;
+    double rotfactor;
+    std::vector<cv::Point> contour;
+} Blob;
+
+bool isSpiky(Blob blob) {
+    // problem is distinguishing blobs eating other blobs...
+    // (and locating split-swarms)
+    return blob.circumference / blob.radius > 2.15 * M_PI ||
+           blob.rotfactor > 10;
 }
 
 Command BlobChaser::next(const QImage &screen) {
@@ -220,7 +284,10 @@ Command BlobChaser::next(const QImage &screen) {
                      const_cast<uchar *>(screen.bits()), screen.bytesPerLine());
 
     scene->setSceneRect(0, 0, screen.width(), screen.height());
-    widget->setMinimumSize(QSize(screen.width() + 2, screen.height() + 2));
+    widget->setTargetRatio(screen.width(), screen.height());
+    widget->updateGeometry();
+    dialog->layout()->invalidate();
+    dialog->updateGeometry();
     widget->fitInView(scene->sceneRect());
     scene->clear();
 
@@ -241,14 +308,6 @@ Command BlobChaser::next(const QImage &screen) {
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(simple, contours, cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
 
-    typedef struct Blob_struct {
-        cv::Point2f center;
-        double area;
-        float radius;
-        double circumference;
-        double rotfactor;
-    } Blob;
-
     std::vector<Blob> blobs(contours.size());
     for (std::vector<cv::Point> contour : contours) {
         Blob blob;
@@ -256,6 +315,7 @@ Command BlobChaser::next(const QImage &screen) {
         cv::minEnclosingCircle(contour, blob.center, blob.radius);
         blob.circumference = cv::arcLength(contour, false);
         blob.rotfactor = rotationFactor(contour);
+        blob.contour = contour;
         blobs.push_back(blob);
     }
 
@@ -281,39 +341,50 @@ Command BlobChaser::next(const QImage &screen) {
         }
 
         float r = dist(pt.center, center);
-        // need a second condition: containment... (a larger blob containing a
-        // smaller blob)
         float s = dist(pt.center, me.center);
-
-        // closer & not engulfed or further and engulfing
-        if ((r < minDist && (s + me.radius > pt.radius)) ||
-            (s + me.radius < pt.radius)) {
+        if (r < minDist && (s + me.radius > pt.radius)) {
+            // Not engulfing, new point is closer
             allBlobsButMe.push_back(me);
             me = pt;
             minDist = r;
+        } else if (s + me.radius < pt.radius) {
+            // yes engulfing (r may increase). We skip the extra
+            me = pt;
+            minDist = r;
         } else {
+            // pt is neither closer nor engulfed me or engulfed by it
             allBlobsButMe.push_back(pt);
         }
-
-        float d1 = pt.radius * 2;
-        scene->addEllipse(pt.center.x - d1 / 2, pt.center.y - d1 / 2, d1, d1,
-                          QPen(Qt::green));
-        float d2 = sqrt(pt.area / M_PI) * 2;
-        scene->addEllipse(pt.center.x - d2 / 2, pt.center.y - d2 / 2, d2, d2,
-                          QPen(Qt::blue));
-        float d3 = pt.circumference / M_PI;
-        scene->addEllipse(pt.center.x - d3 / 2, pt.center.y - d3 / 2, d3, d3,
-                          QPen(Qt::red));
     }
+    // filter out all engulfed blobs (for right now, just those engulfed by me
+    // also, filter out small
+    std::vector<Blob> allSignificantBlobs;
+    for (size_t i = 0; i < allBlobsButMe.size(); i++) {
+        Blob pt = allBlobsButMe[i];
+        float s = dist(pt.center, me.center);
+        if (s + pt.radius < me.radius) {
+            // blobs ungulfed by me
+            continue;
+        }
+
+        if (pt.radius < 30 && pt.center.x < 202 && (h - pt.center.y) < 30) {
+            // small blobs in bottom left hand corner
+            // TODO: evtly, make a score detector to read score from the game
+            continue;
+        }
+
+        allSignificantBlobs.push_back(pt);
+    }
+
     // The best area estimator is the one derived from the radius (of bounding
     // circle)
-
-    // C/r/pi > 2.15 indicates jagged edges. 2 is typical for a blob. less
-    // indicates chunks remove
-    if (me.radius > 0.0 && me.circumference / me.radius < 2.15 * M_PI) {
+    if (!isSpiky(me)) {
         // not hiding under a spiky ball
         myRadius = me.radius;
     }
+    scene->addPolygon(
+        makeRotatedSquare(me.center.x, me.center.y, myRadius * 0.75, M_PI_4),
+        QPen(Qt::yellow));
 
     //    qDebug("ME x %f y %f area %f rad %f center %f %f real %s my %f",
     //           me.center.x, me.center.y, me.area, (double)me.radius, w / 2.0,
@@ -322,38 +393,46 @@ Command BlobChaser::next(const QImage &screen) {
     //           myRadius);
 
     // all motion/attraction relative to the blob, per se
-    QPointF qcenter(me.center.x, me.center.y);
+    cv::Point2f vector(0, 0);
+    for (Blob blob : allSignificantBlobs) {
+        float d1 = blob.radius * 2;
+        scene->addEllipse(blob.center.x - d1 / 2, blob.center.y - d1 / 2, d1,
+                          d1, QPen(Qt::green));
+        float d2 = sqrt(blob.area / M_PI) * 2;
+        scene->addEllipse(blob.center.x - d2 / 2, blob.center.y - d2 / 2, d2,
+                          d2, QPen(Qt::blue));
+        float d3 = blob.circumference / M_PI;
+        scene->addEllipse(blob.center.x - d3 / 2, blob.center.y - d3 / 2, d3,
+                          d3, QPen(Qt::red));
 
-    QPointF vector(0, 0);
-    for (Blob blob : allBlobsButMe) {
-        if (blob.circumference / blob.radius > 2.15 * M_PI ||
-            blob.rotfactor > 10) {
-            // problem is distinguishing blobs eating other blobs...
-            // (and locating split-swarms)
+        // may want to normalize into screen-independent 0-1 (1=diag) units
+        double sep =
+            max(dist(blob.center, me.center) - blob.radius - me.radius, 2);
+
+        double scale;
+        if (isSpiky(blob)) {
             scene->addRect(QRectF(blob.center.x - blob.radius / 3,
                                   blob.center.y - blob.radius / 3,
                                   blob.radius * 2 / 3, blob.radius * 2 / 3),
                            QPen(Qt::magenta));
-            // spiky
-            continue;
+            if (blob.radius > myRadius * 1.1) {
+                continue;
+            } else {
+                if (sep < 20) {
+                    scale = -1;
+                } else {
+                    scale = 0;
+                }
+            }
+        } else {
+            // note distinction between me.radius (current) and myRadius
+            // (skipping
+            // case with me inside spiky)
+            double logratio = log2(blob.radius / myRadius);
+            scale = attractivenessCurve(logratio) / sep;
         }
 
-        QPointF bc(blob.center.x, blob.center.y);
-        double sep = dist(bc, qcenter);
-        if (sep < myRadius) {
-            qDebug("%f %f", sep, myRadius);
-            // ignore things inside the blob (like text)
-            continue;
-        }
-
-        // log base E
-        double logratio = log2(blob.radius / me.radius);
-        double scale = attractivenessCurve(logratio);
-
-        //        qDebug("%f -> %f %f | %f %f", logratio, scale, dist(bc,
-        //        qcenter),
-        //               bc.x() - qcenter.x(), bc.y() - qcenter.y());
-        QPointF shift = (bc - qcenter) * scale / (sep * sep) * 1.1;
+        cv::Point2f shift = (blob.center - me.center) * (scale / sep);
         vector += shift;
 
         QPen pen;
@@ -363,14 +442,15 @@ Command BlobChaser::next(const QImage &screen) {
             pen.setColor(Qt::green);
         }
 
-        scene->addLine(bc.x(), bc.y(), bc.x() + shift.x() * 1000,
-                       bc.y() + shift.y() * 1000, pen);
+        scene->addLine(blob.center.x, blob.center.y,
+                       blob.center.x + shift.x * 1000,
+                       blob.center.y + shift.y * 1000, pen);
     }
 
-    double x = vector.x();
-    double y = vector.y();
+    double x = vector.x;
+    double y = vector.y;
     double mag = sqrt(x * x + y * y);
     double r = min(w, h) / 2;
-    QPointF final = QPointF(w / 2, h / 2) + vector / mag * r;
+    QPointF final = QPointF(w / 2, h / 2) + QPointF(x, y) / mag * r;
     return {final.toPoint(), false, false};
 }

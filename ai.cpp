@@ -187,6 +187,28 @@ qreal dist(QPointF a, QPointF b) {
     return qSqrt(xd * xd + yd * yd);
 }
 
+double rotationFactor(const std::vector<cv::Point> &pts) {
+    // measures number of reversals in curvature  (+->-) for a closed curve.
+    // Probably integral, but algo may change
+
+    int reversals = 0;
+
+    // may want to wrap around
+    cv::Point prev = pts[1] - pts[0];
+    double lastCross = 0;
+    for (int i = 2; i < pts.size(); i++) {
+        cv::Point delta = pts[i] - pts[i - 1];
+        double cross = delta.cross(prev);
+        if (cross != 0) {
+            if (cross * lastCross < 0) {
+                reversals++;
+            }
+            lastCross = cross;
+        }
+    }
+    return (double)reversals;
+}
+
 Command BlobChaser::next(const QImage &screen) {
     // requires:
     // a) Dark color scheme
@@ -224,6 +246,7 @@ Command BlobChaser::next(const QImage &screen) {
         double area;
         float radius;
         double circumference;
+        double rotfactor;
     } Blob;
 
     std::vector<Blob> blobs(contours.size());
@@ -232,6 +255,7 @@ Command BlobChaser::next(const QImage &screen) {
         blob.area = cv::contourArea(contour);
         cv::minEnclosingCircle(contour, blob.center, blob.radius);
         blob.circumference = cv::arcLength(contour, false);
+        blob.rotfactor = rotationFactor(contour);
         blobs.push_back(blob);
     }
 
@@ -250,6 +274,11 @@ Command BlobChaser::next(const QImage &screen) {
     float minDist = w + h;
     for (size_t i = 1; i < blobs.size(); i++) {
         Blob pt = blobs[i];
+
+        if (pt.radius <= 0.0) {
+            // no degenerates
+            continue;
+        }
 
         float r = dist(pt.center, center);
         // need a second condition: containment... (a larger blob containing a
@@ -297,9 +326,15 @@ Command BlobChaser::next(const QImage &screen) {
 
     QPointF vector(0, 0);
     for (Blob blob : allBlobsButMe) {
-        if (blob.radius == 0.0 ||
-            blob.circumference / blob.radius > 2.15 * M_PI) {
-            // degenerate or spiky
+        if (blob.circumference / blob.radius > 2.15 * M_PI ||
+            blob.rotfactor > 10) {
+            // problem is distinguishing blobs eating other blobs...
+            // (and locating split-swarms)
+            scene->addRect(QRectF(blob.center.x - blob.radius / 3,
+                                  blob.center.y - blob.radius / 3,
+                                  blob.radius * 2 / 3, blob.radius * 2 / 3),
+                           QPen(Qt::magenta));
+            // spiky
             continue;
         }
 

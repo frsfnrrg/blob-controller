@@ -58,7 +58,7 @@ class BlobChaser : public AIFace {
 double attractivenessCurve(double x);
 
 // next up: modified form of Blobchaser, with
-// jagged edge detection (to avoid escaping spikes when it's)
+// jagged edge detection (to avoid escaping spikes when it's)-
 // not needed. Then grid identification (periodic X/Y lines, self code),
 // and it's easy. X-render offscreen; play nicer with the mouse (focus blink is
 // bad). Make window sizes nicer, force optimal aspect ratio
